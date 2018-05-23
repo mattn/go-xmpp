@@ -167,6 +167,9 @@ type Options struct {
 	// provided to the server as the xmlns:auth attribute of the OAuth2 authentication request.
 	OAuthXmlNs string
 
+	// AuthExternal will be chosen if this is set to true and if server supports it
+	AuthExternal bool
+
 	// TLS Config
 	TLSConfig *tls.Config
 
@@ -419,11 +422,18 @@ func (c *Client) init(o *Options) error {
 				fmt.Fprintf(c.conn, "<response xmlns='%s'/>\n", nsSASL)
 				break
 			}
+			if m == "EXTERNAL" && o.AuthExternal {
+				mechanism = m
+				// EXTERNAL authentication
+				fmt.Fprintf(c.conn, "<auth xmlns='%s' mechanism='EXTERNAL'/>\n", nsSASL)
+				break
+			}
 		}
 		if mechanism == "" {
 			return fmt.Errorf("PLAIN authentication is not an option: %v", f.Mechanisms.Mechanism)
 		}
 	}
+
 	// Next message should be either success or failure.
 	name, val, err := next(c.p)
 	if err != nil {
@@ -531,7 +541,6 @@ func (c *Client) startStream(o *Options, domain string) (*streamFeatures, error)
 	} else {
 		c.p = xml.NewDecoder(c.conn)
 	}
-
 	_, err := fmt.Fprintf(c.conn, "<?xml version='1.0'?>\n"+
 		"<stream:stream to='%s' xmlns='%s'\n"+
 		" xmlns:stream='%s' version='1.0'>\n",
