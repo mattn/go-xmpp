@@ -603,6 +603,8 @@ type Chat struct {
 	Ooburl    string
 	Oobdesc   string
 	Roster    Roster
+	Markable  bool
+	IdPrefix  string
 	Other     []string
 	OtherElem []XMLElement
 	Stamp     time.Time
@@ -810,12 +812,15 @@ func (c *Client) Recv() (stanza interface{}, err error) {
 
 // Send sends the message wrapped inside an XMPP message stanza body.
 func (c *Client) Send(chat Chat) (n int, err error) {
-	var subtext, thdtext, oobtext string
+	var subtext, thdtext, oobtext, markabletext string
 	if chat.Subject != `` {
 		subtext = `<subject>` + xmlEscape(chat.Subject) + `</subject>`
 	}
 	if chat.Thread != `` {
 		thdtext = `<thread>` + xmlEscape(chat.Thread) + `</thread>`
+	}
+	if chat.Markable {
+		markabletext = `<markable xmlns='urn:xmpp:chat-markers:0'/>`
 	}
 	if chat.Ooburl != `` {
 		oobtext = `<x xmlns="jabber:x:oob"><url>` + xmlEscape(chat.Ooburl) + `</url>`
@@ -825,10 +830,10 @@ func (c *Client) Send(chat Chat) (n int, err error) {
 		oobtext += `</x>`
 	}
 
-	stanza := "<message to='%s' type='%s' id='%s' xml:lang='en'>" + subtext + "<body>%s</body>" + oobtext + thdtext + "</message>"
+	stanza := "<message to='%s' type='%s' id='%s' xml:lang='en'>" + subtext + "<body>%s</body>" + oobtext + thdtext + markabletext + "</message>"
 
 	return fmt.Fprintf(c.conn, stanza,
-		xmlEscape(chat.Remote), xmlEscape(chat.Type), cnonce(), xmlEscape(chat.Text))
+		xmlEscape(chat.Remote), xmlEscape(chat.Type), xmlEscape(chat.IdPrefix)+cnonce(), xmlEscape(chat.Text))
 }
 
 // SendOOB sends OOB data wrapped inside an XMPP message stanza, without actual body.
