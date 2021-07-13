@@ -316,7 +316,11 @@ func (c *Client) init(o *Options) error {
 		}
 		user = a[0]
 		domain = a[1]
-	} // Otherwise, we'll be attempting ANONYMOUS
+	} else if strings.Contains(o.Host, ":") {
+		domain = strings.SplitN(o.Host, ":", 2)[0]
+	} else {
+		domain = o.Host
+	} // Otherwise, we'll be attempting ANONYMOUS with Host domain
 
 	// Declare intent to be a jabber client and gather stream features.
 	f, err := c.startStream(o, domain)
